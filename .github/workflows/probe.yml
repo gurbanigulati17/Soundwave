@@ -20,6 +20,25 @@ jobs:
           ID=$(curl -sS -m 20 "https://api.audius.co/v1/tracks/trending?app_name=Soundwave" | python3 -c "import sys,json; print(json.load(sys.stdin)['data'][0]['id'])" || true)
           echo "first id: $ID"
           curl -sS -I -m 20 "https://api.audius.co/v1/tracks/$ID/stream?app_name=Soundwave" | head -20
+      - name: Audius track fields
+        run: |
+          curl -sS -m 20 "https://api.audius.co/v1/tracks/trending?app_name=Soundwave&time=week" | python3 -c "
+          import sys, json
+          d = json.load(sys.stdin)['data']
+          print('count', len(d))
+          t = d[0]
+          print('keys', sorted(t.keys()))
+          for k in ['artwork','user','stream_conditions','is_streamable','is_delete','access','is_stream_gated']:
+              v = t.get(k)
+              if k == 'user' and v: v = {x: v.get(x) for x in ['id','name','handle','profile_picture']}
+              print(k, '=', json.dumps(v)[:300])
+          print('streamable', sum(1 for x in d if not x.get('stream_conditions') and x.get('is_streamable') is not False and not x.get('is_delete')))
+          "
+      - name: Audius playlists and search
+        run: |
+          curl -sS -m 20 "https://api.audius.co/v1/playlists/trending?app_name=Soundwave&time=week&limit=2" | head -c 800; echo
+          curl -sS -m 20 "https://api.audius.co/v1/tracks/trending/underground?app_name=Soundwave&limit=2" | head -c 300; echo
+          curl -sS -m 20 "https://api.audius.co/v1/tracks/search?app_name=Soundwave&query=lofi&limit=2" | head -c 300; echo
       - name: Radio Browser
         run: |
           curl -sS -m 20 "https://de1.api.radio-browser.info/json/stations/search?tag=bollywood&limit=2&is_https=true" | head -c 600; echo
