@@ -1,33 +1,38 @@
 import type { ReactNode } from "react";
-import { MusicIcon } from "./Icons";
+import { Art } from "./Art";
+import type { IconName } from "./Icons";
 
-export function Loading() {
-  return <div className="status">Loading…</div>;
+export function Loading({ label = "Loading…" }: { label?: string }) {
+  return <div className="status">{label}</div>;
 }
 
-export function ErrorMessage({ error }: { error: Error }) {
-  return <div className="status error">Something went wrong: {error.message}</div>;
+export function ErrorMessage({ error, what }: { error: Error; what: string }) {
+  return (
+    <div className="status error">
+      Couldn't load {what}. Check your internet connection and try again. ({error.message})
+    </div>
+  );
 }
 
 interface HeroProps {
   kind: string;
   title: string;
   image?: string;
+  seed: string;
   round?: boolean;
+  icon?: IconName;
   children?: ReactNode;
 }
 
-/** The large header at the top of album, playlist and artist pages. */
-export function Hero({ kind, title, image, round, children }: HeroProps) {
+/** The large header at the top of playlist, artist and collection pages. */
+export function Hero({ kind, title, image, seed, round, icon, children }: HeroProps) {
   return (
     <header className="hero">
-      <div className={`hero-art ${round ? "round" : ""}`}>
-        {image ? <img src={image} alt="" /> : <MusicIcon size={64} />}
-      </div>
+      <Art src={image} seed={seed} round={round} fallback={icon} className={`hero-art ${seed}-art`} />
       <div className="hero-text">
-        <span className="small">{kind}</span>
-        <h1 className={title.length > 24 ? "long" : ""}>{title}</h1>
-        <div className="hero-meta">{children}</div>
+        <span className="eyebrow">{kind}</span>
+        <h1 className={title.length > 22 ? "long" : ""}>{title}</h1>
+        <div className="meta">{children}</div>
       </div>
     </header>
   );

@@ -1,102 +1,48 @@
-// The subset of Spotify Web API objects this app reads.
-
-export interface Image {
-  url: string;
-  width?: number | null;
-  height?: number | null;
-}
-
-export interface ArtistRef {
-  id: string;
-  name: string;
-  uri: string;
-}
-
-export interface Artist extends ArtistRef {
-  images?: Image[];
-  genres?: string[];
-  followers?: { total: number };
-}
-
-export interface AlbumRef {
-  id: string;
-  name: string;
-  uri: string;
-  images: Image[];
-  artists: ArtistRef[];
-  release_date?: string;
-  album_type?: string;
-}
-
-export interface Album extends AlbumRef {
-  tracks: Paging<Track>;
-  total_tracks: number;
-  label?: string;
-}
+export type Source = "audius" | "jamendo" | "local";
 
 export interface Track {
+  /** Unique across sources, e.g. "audius:Kz8x1". */
+  id: string;
+  source: Source;
+  title: string;
+  artist: string;
+  /** Audius user id, when the artist has a page in the app. */
+  artistId?: string;
+  artwork?: string;
+  /** Seconds. */
+  duration?: number;
+  genre?: string;
+  plays?: number;
+  streamUrl: string;
+}
+
+export interface Artist {
   id: string;
   name: string;
-  uri: string;
-  duration_ms: number;
-  explicit: boolean;
-  artists: ArtistRef[];
-  album?: AlbumRef;
-  is_playable?: boolean;
-}
-
-export interface Paging<T> {
-  items: T[];
-  total: number;
-  next: string | null;
-  offset: number;
-  limit: number;
-}
-
-export interface PlaylistItem {
-  added_at: string;
-  // Spotify renamed `track` to `item` on newer playlist endpoints; accept both.
-  track?: Track | null;
-  item?: Track | null;
+  handle?: string;
+  avatar?: string;
+  cover?: string;
+  bio?: string;
+  followers?: number;
+  trackCount?: number;
 }
 
 export interface Playlist {
   id: string;
   name: string;
-  uri: string;
-  description: string | null;
-  images: Image[] | null;
-  owner: { id: string; display_name: string | null };
-  tracks?: Paging<PlaylistItem> | { total: number };
-  items?: Paging<PlaylistItem> | { total: number };
+  artwork?: string;
+  owner: string;
+  ownerId?: string;
+  description?: string;
+  trackCount?: number;
 }
 
-export interface User {
+export interface Station {
   id: string;
-  display_name: string | null;
-  images?: Image[];
-  product?: string;
+  name: string;
+  url: string;
+  favicon?: string;
+  tags: string[];
   country?: string;
-}
-
-export interface SavedTrack {
-  added_at: string;
-  track: Track;
-}
-
-export interface SavedAlbum {
-  added_at: string;
-  album: AlbumRef;
-}
-
-export interface PlayHistory {
-  played_at: string;
-  track: Track;
-}
-
-export interface SearchResults {
-  tracks?: Paging<Track>;
-  artists?: Paging<Artist>;
-  albums?: Paging<AlbumRef>;
-  playlists?: Paging<Playlist | null>;
+  bitrate?: number;
 }

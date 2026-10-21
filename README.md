@@ -1,80 +1,83 @@
 # Soundwave
 
-A Spotify-style music web app built with React, TypeScript and Vite. It uses
-Spotify's official **Web API** for browsing and the **Web Playback SDK** to
-play music in the browser.
+A free music player for the web and Android. It streams real songs from
+independent artists, live radio stations from around the world, and your own
+music files. It needs no accounts and no paid APIs.
 
 ![Home screen](docs/home.png)
 
+## Where the music comes from
+
+| Source | What it provides | Setup |
+| --- | --- | --- |
+| [Audius](https://audius.co) | Full tracks, trending charts, playlists and artist pages from independent artists, through Audius's open API | None |
+| [Radio Browser](https://www.radio-browser.info) | 50,000+ live radio stations, including Bollywood, Punjabi and chart-hits stations | None |
+| [Jamendo](https://www.jamendo.com) | About 600,000 Creative Commons tracks | Optional free client ID |
+| Your files | MP3, M4A, WAV, OGG or FLAC files you add. Stored on the device and playable offline | None |
+
+Mainstream label releases are only available through licensed radio stations.
+No source offers them on demand for free.
+
 ## Features
 
-- Log in with Spotify (PKCE flow, no backend or client secret needed)
-- Home: recently played, your playlists, top artists, top tracks, saved albums
-- Search across songs, artists, albums and playlists
-- Playlist, album, artist and Liked Songs pages
-- Your Library with playlists, albums and artists
-- Player bar: play/pause, next/previous, seek, volume, shuffle, repeat
+- **Home:** trending songs with play counts, popular playlists, live Bollywood radio, rising artists
+- **Genres:** Audius charts per genre for this week, this month or all time
+- **Search:** songs, artists, playlists, radio stations and Creative Commons tracks in one search
+- **Radio:** stations by category (Bollywood, Punjabi, Hindi, Top Hits, Pop, Lo-fi and more); save favourites
+- **Your Library:** Liked Songs, saved stations and your own files
+- **Player:** play/pause, next/previous, seek, shuffle, repeat all/one and volume, with lock-screen controls
+- Phone layout with a bottom tab bar and a mini player
+- Installable as a web app (PWA) or as an Android APK
 
-## Requirements
+## Get the app
 
-- Node.js 18 or newer
-- A Spotify account. **Playback requires Spotify Premium**; browsing works on any account.
+Once this repo is on GitHub, both builds run automatically on every push to `main`:
 
-## Setup
+- **Web app:** published to GitHub Pages at `https://<your-username>.github.io/<repo>/`.
+  Enable it once under **Settings → Pages → Source: GitHub Actions**.
+- **Android APK:** attached to the **latest** release under **Releases**. On your phone,
+  download `Soundwave.apk`, open it, and allow "Install unknown apps" for your browser
+  when Android asks.
 
-1. Go to the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) and create an app.
-   - **Redirect URI:** `http://127.0.0.1:5173/callback`
-     (Spotify no longer accepts `localhost`; use `127.0.0.1`.)
-   - **APIs used:** tick *Web API* and *Web Playback SDK*.
-2. In the app's **User Management** settings, add the Spotify email of every
-   account that will log in. Apps in development mode only work for listed users.
-3. Copy the env file and paste in your app's Client ID:
+To add Jamendo, create a free client ID at <https://devportal.jamendo.com> and add it under
+**Settings → Secrets and variables → Actions → Variables** as `JAMENDO_CLIENT_ID`.
 
-   ```sh
-   cp .env.example .env
-   # then edit .env: VITE_SPOTIFY_CLIENT_ID=<your client id>
-   ```
+## Run it locally
 
-4. Install and run:
+```sh
+npm install
+cp .env.example .env   # optional: add VITE_JAMENDO_CLIENT_ID
+npm run dev            # http://127.0.0.1:5173
+```
 
-   ```sh
-   npm install
-   npm run dev
-   ```
+## Build the Android app yourself
 
-5. Open <http://127.0.0.1:5173> and log in.
+Requires Android Studio (or the Android SDK) and JDK 17.
 
-## Scripts
+```sh
+npm run android:project     # generates android/ with the app icon
+cd android && ./gradlew assembleDebug
+# APK: android/app/build/outputs/apk/debug/app-debug.apk
+```
 
-| Command             | What it does                      |
-| ------------------- | --------------------------------- |
-| `npm run dev`       | Start the dev server on port 5173 |
-| `npm run build`     | Typecheck and build to `dist/`    |
-| `npm run preview`   | Serve the production build        |
-| `npm run typecheck` | Run the TypeScript compiler only  |
-
-## Deploying
-
-Build with `npm run build` and host `dist/` on any static host (Netlify,
-Vercel, GitHub Pages…). Configure it to serve `index.html` for all routes, set
-`VITE_SPOTIFY_REDIRECT_URI` to `https://<your-domain>/callback`, and add that
-same URI to your Spotify app.
+After changing the web code, run `npm run android:sync` to copy it into the Android project.
 
 ## Project layout
 
 ```
 src/
-  auth.ts                 PKCE login, token storage and refresh
-  api.ts                  Typed Spotify Web API client
-  player/PlayerProvider   Web Playback SDK wrapper and playback controls
-  components/             Sidebar, player bar, track table, cards
-  pages/                  Home, Search, Playlist, Album, Artist, Library, Liked Songs
+  sources/        audius.ts, radio.ts, jamendo.ts, local.ts (one module per music source)
+  player/         PlayerProvider: queue, shuffle, repeat, media-session controls
+  state/          LibraryProvider: liked songs, saved stations, local files
+  components/     Sidebar, player bar, tab bar, track table, cards
+  pages/          Home, Search, Genre, Radio, Playlist, Artist, Library, Liked, Files
+capacitor.config.ts   Android app id and name
+assets/               Icon sources for the Android launcher icon
+.github/workflows/    web.yml (GitHub Pages) and android.yml (APK release)
 ```
 
-## Notes
+## Credits
 
-- Spotify has restricted some endpoints for newly created apps (for example
-  artist top tracks and some editorial playlists). The app hides those sections
-  when Spotify refuses them.
-- Soundwave is an independent project and is not affiliated with Spotify. It
-  uses no Spotify code, logos or artwork beyond what the API returns.
+Music and metadata come from Audius, Jamendo and the stations listed on Radio
+Browser. All rights stay with the artists and stations. Soundwave is an independent
+project and is not affiliated with any of these services.

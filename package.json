@@ -7,17 +7,22 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "android:project": "npm run build && npx cap add android && npx cap sync android && npx capacitor-assets generate --android",
+    "android:sync": "npm run build && npx cap sync android"
   },
   "dependencies": {
+    "@capacitor/core": "^6.1.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.28.0"
   },
   "devDependencies": {
+    "@capacitor/android": "^6.1.2",
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^6.1.2",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
-    "@types/spotify-web-playback-sdk": "^0.1.19",
     "@vitejs/plugin-react": "^4.3.4",
     "typescript": "^5.6.3",
     "vite": "^5.4.11"

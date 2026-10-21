@@ -1,0 +1,57 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - run: npm ci
+      - run: npm run build
+        env:
+          VITE_JAMENDO_CLIENT_ID: ${{ vars.JAMENDO_CLIENT_ID }}
+
+      # The Android project is generated fresh from capacitor.config.ts on every build.
+      - run: npx cap add android
+      - run: npx cap sync android
+      - run: npx capacitor-assets generate --android
+
+      - name: Build debug APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - run: cp android/app/build/outputs/apk/debug/app-debug.apk Soundwave.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Soundwave-apk
+          path: Soundwave.apk
+
+      - name: Publish to the "latest" release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Soundwave (latest build)
+          body: |
+            Android app built from ${{ github.sha }}.
+            Download **Soundwave.apk** below and open it on your phone to install.
+          prerelease: false
+          make_latest: true
+          files: Soundwave.apk

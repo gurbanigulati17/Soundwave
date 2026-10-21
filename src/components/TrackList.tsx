@@ -1,73 +1,114 @@
 import { Link } from "react-router-dom";
 import { usePlayer } from "../player/PlayerProvider";
+import { useLibrary } from "../state/LibraryProvider";
 import type { Track } from "../types";
-import { formatDuration, pickImage } from "../util";
-import { ClockIcon, PlayIcon } from "./Icons";
+import { compact, formatTime } from "../util";
+import { Art } from "./Art";
+import { Icon } from "./Icons";
 
 interface Props {
   tracks: Track[];
-  /** When set, plays within this context (playlist/album) so next/previous follow it. */
-  contextUri?: string;
-  showAlbum?: boolean;
+  contextId: string;
   showArt?: boolean;
+  showPlays?: boolean;
+  onRemove?: (track: Track) => void;
 }
 
-export function TrackList({ tracks, contextUri, showAlbum = true, showArt = true }: Props) {
-  const player = usePlayer();
+export function Equalizer({ paused }: { paused: boolean }) {
+  return (
+    <span className={`eq ${paused ? "paused" : ""}`} aria-hidden="true">
+      <i />
+      <i />
+      <i />
+    </span>
+  );
+}
 
-  const play = (track: Track) => {
-    if (contextUri) player.playContext(contextUri, track.uri);
-    else player.playTracks(tracks.map((t) => t.uri), track.uri);
-  };
+export function TrackList({ tracks, contextId, showArt = true, showPlays = false, onRemove }: Props) {
+  const player = usePlayer();
+  const lib = useLibrary();
+
+  if (!tracks.length) return <p className="empty">No songs here yet.</p>;
 
   return (
-    <table className="tracks">
-      <thead>
-        <tr>
-          <th className="num">#</th>
-          <th>Title</th>
-          {showAlbum && <th className="hide-sm">Album</th>}
-          <th className="dur">
-            <ClockIcon />
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        {tracks.map((t, i) => {
-          const current = player.track?.uri === t.uri || player.track?.id === t.id;
-          return (
-            <tr key={`${t.id}-${i}`} className={current ? "current" : ""} onDoubleClick={() => play(t)}>
-              <td className="num">
-                <span className="idx">{i + 1}</span>
-                <button className="row-play" onClick={() => play(t)} aria-label={`Play ${t.name}`}>
-                  <PlayIcon size={14} />
-                </button>
-              </td>
-              <td>
-                <div className="track-title">
-                  {showArt && t.album && <img src={pickImage(t.album.images, 64)} alt="" />}
-                  <div>
-                    <div className="title">{t.name}</div>
-                    <div className="sub">
-                      {t.explicit && <span className="explicit">E</span>}
-                      {t.artists.map((a, j) => (
-                        <span key={a.id ?? j}>
-                          {j > 0 && ", "}
-                          <Link to={`/artist/${a.id}`}>{a.name}</Link>
-                        </span>
-                      ))}
+    <div className="table-wrap">
+      <table className="tracks">
+        <thead>
+          <tr>
+            <th className="c-num">#</th>
+            <th>Title</th>
+            {showPlays && <th className="c-plays">Plays</th>}
+            <th className="c-like" />
+            <th className="c-dur">
+              <Icon name="clock" size={16} />
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {tracks.map((t, i) => {
+            const current = player.track?.id === t.id && player.contextId === contextId;
+            const play = () => (current ? player.toggle() : player.playTracks(tracks, i, contextId));
+            const liked = lib.isLiked(t.id);
+            return (
+              <tr key={`${t.id}-${i}`} className={current ? "current" : ""} onClick={play}>
+                <td className="c-num">
+                  <span className="idx">{current ? <Equalizer paused={!player.playing} /> : i + 1}</span>
+                  <span className="row-play">
+                    <Icon name={current && player.playing ? "pause" : "play"} size={14} />
+                  </span>
+                </td>
+                <td>
+                  <div className="t-cell">
+                    {showArt && <Art src={t.artwork} seed={t.id} className="t-art" />}
+                    <div>
+                      <b>{t.title}</b>
+                      <span>
+                        {t.source !== "audius" && <span className="tag">{t.source === "local" ? "File" : "CC"}</span>}
+                        {t.artistId ? (
+                          <Link className="link" to={`/artist/${t.artistId}`} onClick={(e) => e.stopPropagation()}>
+                            {t.artist}
+                          </Link>
+                        ) : (
+                          t.artist
+                        )}
+                      </span>
                     </div>
                   </div>
-                </div>
-              </td>
-              {showAlbum && (
-                <td className="hide-sm sub">{t.album && <Link to={`/album/${t.album.id}`}>{t.album.name}</Link>}</td>
-              )}
-              <td className="dur sub">{formatDuration(t.duration_ms)}</td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
+                </td>
+                {showPlays && <td className="c-plays tnum">{compact(t.plays)}</td>}
+                <td className="c-like">
+                  {onRemove ? (
+                    <button
+                      className="icon-btn"
+                      aria-label={`Remove ${t.title}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRemove(t);
+                      }}
+                    >
+                      <Icon name="trash" size={16} />
+                    </button>
+                  ) : (
+                    t.source !== "local" && (
+                      <button
+                        className={`icon-btn heart ${liked ? "on" : ""}`}
+                        aria-label={liked ? "Remove from Liked Songs" : "Save to Liked Songs"}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          lib.toggleLike(t);
+                        }}
+                      >
+                        <Icon name={liked ? "heart" : "heartLine"} size={16} />
+                      </button>
+                    )
+                  )}
+                </td>
+                <td className="c-dur tnum">{t.duration ? formatTime(t.duration) : ""}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }

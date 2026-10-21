@@ -1,83 +1,65 @@
-import { api } from "../api";
-import { Shelf, type CardItem } from "../components/Shelf";
+import { Link } from "react-router-dom";
+import { PlaylistCards, Shelf, StationCards, TrackCards } from "../components/Cards";
+import { ErrorMessage, Loading } from "../components/Status";
 import { TrackList } from "../components/TrackList";
-import { greeting, pickImage, useAsync } from "../util";
+import { audius, GENRES } from "../sources/audius";
+import { jamendo } from "../sources/jamendo";
+import { radio } from "../sources/radio";
+import { greeting, useAsync } from "../util";
 
 export function Home() {
-  const recent = useAsync(() => api.recentlyPlayed(), []);
-  const topTracks = useAsync(() => api.topTracks(), []);
-  const topArtists = useAsync(() => api.topArtists(), []);
-  const playlists = useAsync(() => api.myPlaylists(), []);
-  const albums = useAsync(() => api.savedAlbums(), []);
-
-  // Recently played tracks, de-duplicated into their albums.
-  const recentAlbums: CardItem[] = [];
-  const seen = new Set<string>();
-  for (const { track } of recent.data?.items ?? []) {
-    if (!track.album || seen.has(track.album.id)) continue;
-    seen.add(track.album.id);
-    recentAlbums.push({
-      id: track.album.id,
-      title: track.album.name,
-      subtitle: track.artists.map((a) => a.name).join(", "),
-      image: pickImage(track.album.images),
-      href: `/album/${track.album.id}`,
-      uri: track.album.uri,
-    });
-  }
+  const trending = useAsync(() => audius.trending(), []);
+  const playlists = useAsync(() => audius.trendingPlaylists(), []);
+  const underground = useAsync(() => audius.underground(), []);
+  const bollywood = useAsync(() => radio.byTag("bollywood", 12), []);
+  const cc = useAsync(() => jamendo.popular(), []);
 
   return (
-    <div className="page">
+    <div className="view">
       <h1 className="greeting">{greeting()}</h1>
 
-      <Shelf title="Recently played" items={recentAlbums.slice(0, 12)} />
+      <div className="chips" role="list" aria-label="Genres">
+        {GENRES.map((g) => (
+          <Link key={g} className="chip" role="listitem" to={`/genre/${encodeURIComponent(g)}`}>
+            {g}
+          </Link>
+        ))}
+      </div>
 
-      <Shelf
-        title="Your playlists"
-        items={(playlists.data?.items ?? []).filter(Boolean).slice(0, 12).map((p) => ({
-          id: p.id,
-          title: p.name,
-          subtitle: `By ${p.owner.display_name ?? "Unknown"}`,
-          image: pickImage(p.images),
-          href: `/playlist/${p.id}`,
-          uri: p.uri,
-        }))}
-      />
+      <section className="shelf">
+        <div className="shelf-head">
+          <h2>Trending this week</h2>
+          <Link className="see-all" to="/genre/All">
+            Show all
+          </Link>
+        </div>
+        {trending.loading && <Loading />}
+        {trending.error && <ErrorMessage error={trending.error} what="trending songs" />}
+        {trending.data && <TrackList tracks={trending.data.slice(0, 10)} contextId="trending" showPlays />}
+      </section>
 
-      <Shelf
-        title="Your top artists"
-        items={(topArtists.data?.items ?? []).slice(0, 12).map((a) => ({
-          id: a.id,
-          title: a.name,
-          subtitle: "Artist",
-          image: pickImage(a.images),
-          href: `/artist/${a.id}`,
-          uri: a.uri,
-          round: true,
-        }))}
-      />
-
-      {topTracks.data && topTracks.data.items.length > 0 && (
-        <section className="shelf">
-          <h2>On repeat lately</h2>
-          <TrackList tracks={topTracks.data.items.slice(0, 10)} />
-        </section>
+      {playlists.data && playlists.data.length > 0 && (
+        <Shelf title="Popular playlists">
+          <PlaylistCards playlists={playlists.data.slice(0, 12)} />
+        </Shelf>
       )}
 
-      <Shelf
-        title="Saved albums"
-        items={(albums.data?.items ?? []).slice(0, 12).map(({ album }) => ({
-          id: album.id,
-          title: album.name,
-          subtitle: album.artists.map((a) => a.name).join(", "),
-          image: pickImage(album.images),
-          href: `/album/${album.id}`,
-          uri: album.uri,
-        }))}
-      />
+      {bollywood.data && bollywood.data.length > 0 && (
+        <Shelf title="Live Bollywood radio" action={<Link className="see-all" to="/radio">Show all</Link>}>
+          <StationCards stations={bollywood.data.slice(0, 6)} />
+        </Shelf>
+      )}
 
-      {[recent, topTracks, topArtists, playlists, albums].every((s) => s.loading) && (
-        <div className="status">Loading…</div>
+      {underground.data && underground.data.length > 0 && (
+        <Shelf title="Rising artists">
+          <TrackCards tracks={underground.data.slice(0, 12)} contextId="underground" />
+        </Shelf>
+      )}
+
+      {cc.data && cc.data.length > 0 && (
+        <Shelf title="Free to share (Creative Commons)">
+          <TrackCards tracks={cc.data.slice(0, 12)} contextId="jamendo" />
+        </Shelf>
       )}
     </div>
   );
