@@ -1,0 +1,20 @@
+name: Check music sources
+
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Audius gateway
+        run: curl -sS -i -m 20 https://api.audius.co | head -c 1500; echo
+      - name: Audius trending via gateway
+        run: curl -sS -i -m 20 -H "Origin: https://gurbanigulati17.github.io" "https://api.audius.co/v1/tracks/trending?app_name=Soundwave&time=week" | head -c 2500; echo
+      - name: Audius stream redirect
+        run: |
+          ID=$(curl -sS -m 20 "https://api.audius.co/v1/tracks/trending?app_name=Soundwave" | python3 -c "import sys,json; print(json.load(sys.stdin)['data'][0]['id'])" || true)
+          echo "first id: $ID"
+          curl -sS -I -m 20 "https://api.audius.co/v1/tracks/$ID/stream?app_name=Soundwave" | head -20
+      - name: Radio Browser
+        run: curl -sS -m 20 "https://de1.api.radio-browser.info/json/stations/search?tag=bollywood&limit=2&is_https=true" | head -c 600; echo
