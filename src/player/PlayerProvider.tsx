@@ -75,12 +75,36 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const stateRef = useRef(s);
   stateRef.current = s;
 
+  const hlsRef = useRef<{ destroy: () => void } | null>(null);
+
   const load = useCallback((url: string) => {
     const audio = audioRef.current;
+    const fail = (e: Error) => {
+      if (e.name !== "AbortError") setS((p) => ({ ...p, error: "This couldn't be played.", loading: false }));
+    };
+    hlsRef.current?.destroy();
+    hlsRef.current = null;
+
+    // Many radio stations stream HLS (.m3u8). Safari and Android play it natively;
+    // other browsers need hls.js, which is loaded only when first needed.
+    const isHls = /\.m3u8($|\?)/i.test(url);
+    if (isHls && !audio.canPlayType("application/vnd.apple.mpegurl")) {
+      import("hls.js").then(({ default: Hls }) => {
+        if (!Hls.isSupported()) return fail(new Error("HLS unsupported"));
+        const hls = new Hls();
+        hlsRef.current = hls;
+        hls.loadSource(url);
+        hls.attachMedia(audio);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => audio.play().catch(fail));
+        hls.on(Hls.Events.ERROR, (_e, data) => {
+          if (data.fatal) setS((p) => ({ ...p, error: "This station is offline right now.", loading: false, playing: false }));
+        });
+      }, fail);
+      return;
+    }
+
     audio.src = url;
-    audio.play().catch((e: Error) => {
-      if (e.name !== "AbortError") setS((p) => ({ ...p, error: "This song couldn't be played.", loading: false }));
-    });
+    audio.play().catch(fail);
   }, []);
 
   const playIndex = useCallback(
